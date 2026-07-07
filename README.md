@@ -1,58 +1,93 @@
-# Hướng Dẫn Thiết Lập Filament AI Skill Tập Trung Cho Continue.dev
+Dưới đây là bản cập nhật hoàn chỉnh cho file `README.md` (hoặc `SETUP.md`), bao gồm cả luồng làm việc chuẩn với Git Submodule và mục **Xử lý sự cố (Troubleshooting)** mà bạn vừa gặp phải. Bạn có thể copy toàn bộ nội dung này để làm tài liệu chuẩn hóa cho team.
 
-Tài liệu này hướng dẫn cách thiết lập một "Kho tri thức AI" (AI Skill Repository) tập trung cho Filament. Giải pháp này giúp bạn cài đặt tự động và yêu cầu AI sinh code chuẩn kiến trúc cho các dự án Laravel + Filament thông qua Continue.dev mà không cần phải copy-paste các file rules (như `SKILL.md`, `CLAUDE.md`) vào từng dự án riêng lẻ.
+# Hướng Dẫn Thiết Lập Filament AI Skill (Git Submodule) Cho Continue.dev
 
-## 🚀 Lợi ích
-
-- **DRY (Don't Repeat Yourself):** Quản lý rules AI ở một nơi duy nhất.
-- **Cập nhật đồng bộ:** Sửa rule một lần ở kho trung tâm, mọi dự án cũ và mới đều nhận được bối cảnh (context) mới nhất.
-- **Tự động hóa toàn diện:** Khởi tạo dự án mới chuẩn kiến trúc chỉ với 1 slash command.
+Tài liệu này hướng dẫn cách đồng bộ bộ quy tắc AI (AI Skill) cho Filament v4 vào dự án thông qua Git Submodule. Phương pháp này giúp toàn bộ team phát triển có chung một "nguồn tri thức" chuẩn xác về kiến trúc, bảo mật và hiệu năng khi sử dụng AI (Continue.dev).
 
 ---
 
-## 🛠 Các bước thiết lập
+## 🚀 1. Khởi tạo Submodule vào dự án (Dành cho người setup dự án)
 
-### Bước 1: Lưu trữ Repository Skill ở vị trí cố định
+Tại thư mục gốc của dự án Laravel, chạy lệnh sau để kéo bộ Skill về làm Submodule:
 
-Lưu toàn bộ repository chứa các file rules của Filament (bao gồm `SKILL.md`, `CLAUDE.md`, và thư mục `references/`) tại một đường dẫn tuyệt đối (Absolute Path) trên máy tính của bạn.
-
-_Ví dụ đường dẫn:_
-
-- Trên Windows: `/frameworks/filament-skill`
-- Trên Mac/Linux: `~/frameworks/filament-skill`
-
-### Bước 2: Cấu hình lệnh tùy chỉnh (Custom Command) toàn cục
-
-Thiết lập lệnh khởi tạo dự động trong Continue.dev để AI có thể đọc file rule từ kho trung tâm và tự động chạy script cài đặt.
-
-1. Mở giao diện **Continue** trong IDE (VS Code / JetBrains).
-2. Nhấn vào biểu tượng ⚙️ **(Settings)** ở góc dưới cùng bên phải để mở file `config.json` toàn cục.
-3. Thêm cấu hình sau vào mảng `"customCommands"` _(lưu ý: hãy thay đổi đường dẫn `/frameworks/filament-skill/SKILL.md` cho khớp với đường dẫn thực tế trên máy tính của bạn)_:
-
-```json
-"customCommands": [
-  {
-    "name": "install_filament",
-    "description": "Khởi tạo dự án Laravel và Filament v4 sạch vào thư mục hiện tại dựa trên bộ quy tắc hệ thống tập trung.",
-    "prompt": "You are an expert AI Architect. First, read and strictly adhere to the infrastructure and architecture standards defined in this master skill file: 'C:/ai-frameworks/filament-skill/SKILL.md' (and its referenced documentation under the same directory if needed).\n\nNow, perform a fresh installation of Laravel and Filament v4 in the current empty directory by executing these terminal commands sequentially:\n1. `composer create-project laravel/laravel . --force`\n2. Configure `.env` to use SQLite (create `database/database.sqlite` if it doesn't exist).\n3. `php artisan migrate`\n4. `composer require filament/filament:\"^4.0\" -W`\n5. `php artisan filament:install --panels`\n6. `php artisan make:filament-user` (Auto-fill with Name: Admin, Email: admin@admin.com, Password: password).\n\nCONFIRMATION: Run these commands directly using your terminal execution capabilities. Do not ask for user input between steps unless a fatal error occurs."
-  }
-]
+```bash
+git submodule add git@github.com:vinhhx/filament-v4-skill.git .continue/prompts
 ```
 
-### Bước 3: Khởi tạo dự án mới
+## ⚙️ 2. Cấu hình Continue.dev cấp dự án (Workspace Level)
 
-Quy trình làm việc khi bạn bắt đầu phát triển một dự án mới:
+Để mọi thành viên trong team gõ `@Filamentv4` là gọi được bộ rule, chúng ta cấu hình trực tiếp vào dự án.
 
-1. Tạo một thư mục trống hoàn toàn và mở thư mục đó bằng IDE.
-2. Mở sidebar chat của Continue.dev.
-3. Gõ lệnh `/install_filament` và nhấn **Enter**.
-4. AI Agent sẽ tự động đọc kiến trúc từ kho trung tâm, mở terminal và thực thi tuần tự các lệnh cài đặt Laravel, cấu hình database SQLite, tải Filament v4 và tạo tài khoản Admin.
+1. Đảm bảo đã có thư mục `.continue` ở root dự án.
+2. Tạo/Mở file `.continue/config.ts` và thêm cấu hình sau:
+
+```typescript
+export function modifyConfig(config: Config): Config {
+  if (!config.contextProviders) {
+    config.contextProviders = [];
+  }
+
+  // Khai báo Provider trỏ vào thư mục submodule
+  config.contextProviders.push({
+    name: "Filamentv4",
+    title: "Filamentv4",
+    description: "Bộ rules kiến trúc Filament v4 chuẩn của Team",
+    type: "folder",
+  });
+
+  return config;
+}
+```
+
+_Lưu ý: Lần đầu tiên gõ `@Filamentv4` trong chat, IDE sẽ hiển thị hộp thoại chọn thư mục. Các thành viên chỉ cần trỏ vào thư mục `.continue/prompts` của dự án._
 
 ---
 
-## 🔄 Quy trình cập nhật (Maintenance Workflow)
+## 🔄 3. Quy trình làm việc của Team (Git Protocol)
 
-Vì cấu hình trong Continue.dev trỏ trực tiếp bằng **đường dẫn tuyệt đối** đến kho trung tâm, hệ thống này cực kỳ dễ bảo trì:
+**A. Khi Clone dự án mới về máy:**
+Bắt buộc sử dụng cờ `--recurse-submodules` để Git tải luôn cả mã nguồn dự án lẫn bộ rule AI.
 
-1. Khi có bản cập nhật mới thay đổi coding convention, bạn chỉ cần mở thư mục `/frameworks/filament-skill` và sửa đổi các file Markdown bên trong đó.
-2. **Không cần thao tác lại ở bất kỳ dự án nào.** Lần gõ prompt tiếp theo hoặc lần chạy lệnh cài đặt mới, Continue sẽ tự động đọc và tuân thủ theo nội dung file cập nhật mới nhất.
+```bash
+git clone --recurse-submodules <link_repo_du_an_cua_ban>
+
+```
+
+**B. Khi cần cập nhật Rule AI mới nhất:**
+Nếu có ai đó cập nhật file `SKILL.md` trên repo gốc, các thành viên khác chỉ cần chạy lệnh sau để kéo bản cập nhật về dự án hiện tại:
+
+```bash
+git submodule update --remote
+
+```
+
+---
+
+## 🛠 4. Xử lý sự cố thường gặp (Troubleshooting)
+
+### Lỗi: `fatal: '.continue/prompts' already exists and is not a valid git repo`
+
+**Nguyên nhân:** Git Submodule yêu cầu thư mục đích (`.continue/prompts`) phải chưa được tạo sẵn trên ổ cứng hoặc chưa bị Git của dự án chính index.
+
+**Cách khắc phục (Thực hiện lần lượt 3 bước):**
+
+1. **Xóa thư mục đang cản đường:** (Hãy backup nếu bên trong đang chứa file do bạn tự tạo)
+
+```bash
+rm -rf .continue/prompts
+
+```
+
+2. **Xóa cache của Git:** (Xóa dấu vết thư mục trong Git index)
+
+```bash
+git rm -r --cached .continue/prompts
+
+```
+
+_(Nếu terminal báo lỗi `pathspec did not match any files`, bạn cứ bỏ qua vì điều đó chứng tỏ Git chưa track nó)._ 3. **Chạy lại lệnh thêm Submodule:**
+
+```bash
+git submodule add git@github.com:vinhhx/filament-v4-skill.git .continue/prompts
+
+```
